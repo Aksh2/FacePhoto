@@ -7,5 +7,5 @@ import com.google.mlkit.vision.face.Face
     val id: Long? = null,
     val name: String? = null,
     val uri: Uri? = null,
-    val faceBounds: Face? = null
+    val faces: List<Face>? = null
 )

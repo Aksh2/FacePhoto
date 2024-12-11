@@ -24,22 +24,21 @@ import javax.inject.Inject
  */
 
 @HiltViewModel
-class ImageViewModel @Inject constructor(private val imageRepository: ImageRepository,
-                                         private val faceDetector: FaceDetector): ViewModel() {
-
+class ImageViewModel @Inject constructor(
+    private val imageRepository: ImageRepository,
+    val faceDetector: FaceDetector
+) : ViewModel() {
 
 
     // MutableLiveData to be accessed only inside Viewmodel.
     private val _humanFaceLiveData = MutableLiveData<List<GalleryImage>>()
 
 
-
-
     /**
      * Detects human faces in the [InputImage] and returns a list of [Face] objects.
      * Returns error message in case of error.
      */
-    fun detectFaces() {
+    /*fun detectFaces() {
         val humanImages = mutableListOf<GalleryImage>()
         viewModelScope.launch(Dispatchers.IO) {
             imageRepository.fetchGalleryImages().forEach { galleryImage ->
@@ -55,12 +54,12 @@ class ImageViewModel @Inject constructor(private val imageRepository: ImageRepos
             }
 
         }
-    }
+    }*/
 
     fun fetchPagedImages(): Pager<Int, GalleryImage> {
         return Pager(
             config = PagingConfig(pageSize = 10),
-            pagingSourceFactory = { GalleryImagePagingSource(_humanFaceLiveData.value ?: emptyList()) }
+            pagingSourceFactory = { GalleryImagePagingSource(imageRepository) }
         )
     }
 

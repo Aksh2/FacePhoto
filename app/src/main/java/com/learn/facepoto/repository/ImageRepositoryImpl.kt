@@ -8,11 +8,13 @@ import android.provider.MediaStore
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.learn.facepoto.data.GalleryImage
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class ImageRepositoryImpl @Inject constructor(
     private val context: Context,
-    private val faceDetector: FaceDetector
 ) : ImageRepository {
     val uniquePath = HashSet<String>()
     override fun fetchGalleryImages(): List<GalleryImage> {
@@ -28,7 +30,6 @@ class ImageRepositoryImpl @Inject constructor(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
             MediaStore.Images.Media.DATE_ADDED,
-            MediaStore.Images.Media.DATA
         )
 
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
@@ -52,12 +53,14 @@ class ImageRepositoryImpl @Inject constructor(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     id
                 )
-
                 if (uniquePath.add(name)) {
                     images.add(GalleryImage(id, name, contentUri))
+                    }
+
                 }
+
             }
-        }
+
         return images
     }
 }

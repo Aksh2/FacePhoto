@@ -22,8 +22,6 @@ object AppModule {
     fun provideFaceDetector(): FaceDetector {
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
-            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
-            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
             .build()
 
         return FaceDetection.getClient(options)
@@ -35,9 +33,8 @@ object AppModule {
     @Singleton
     fun provideImageRepository(
         @ApplicationContext context: Context,
-        faceDetector: FaceDetector
     ): ImageRepository {
-        return ImageRepositoryImpl(context, faceDetector)
+        return ImageRepositoryImpl(context)
     }
 
 }
