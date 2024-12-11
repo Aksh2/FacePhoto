@@ -14,15 +14,13 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel: ImageViewModel by viewModels()
 
-    @Inject
-    lateinit var faceDetector: FaceDetector
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ImageGridView(
-                viewModel.fetchPagedImages().flow
+                viewModel.fetchPagedImages().flow,
+                viewModel.faceDetector
             )
 
         }
