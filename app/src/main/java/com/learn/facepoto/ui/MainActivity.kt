@@ -73,8 +73,5 @@ class MainActivity : AppCompatActivity() {
     }
 }*/
 
-/*override fun onFaceDetectionError(e: Exception) {
-    TODO("Not yet implemented")
-}*/
 
 
