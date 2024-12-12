@@ -23,7 +23,6 @@ object AppModule {
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
             .build()
-
         return FaceDetection.getClient(options)
     }
 

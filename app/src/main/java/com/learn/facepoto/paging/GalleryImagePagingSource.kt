@@ -5,15 +5,14 @@ import androidx.paging.PagingState
 import com.learn.facepoto.data.GalleryImage
 import com.learn.facepoto.repository.ImageRepository
 
-class GalleryImagePagingSource (
-    private val imageRepository: ImageRepository,
+class GalleryImagePagingSource(
+    private val imageRepository: ImageRepository
 ) :
     PagingSource<Int, GalleryImage>() {
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, GalleryImage> {
         return try {
             val page = params.key ?: 0 // Start with page 0
             val images = imageRepository.fetchGalleryImages()//images
-
             LoadResult.Page(
                 data = images,
                 prevKey = if (page == 0) null else page - 1,
