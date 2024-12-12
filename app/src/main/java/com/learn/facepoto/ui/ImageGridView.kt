@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.learn.facepoto.ui
 
 import android.Manifest
@@ -11,13 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +34,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -40,42 +46,103 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetector
 import com.learn.facepoto.data.GalleryImage
+import com.learn.facepoto.data.ImageState
+import com.learn.facepoto.paging.GalleryImageListPagingSource
+import com.learn.facepoto.viewmodel.ImageViewModel
 import kotlinx.coroutines.flow.Flow
 
 @Composable
-fun ImageGridView(images: Flow<PagingData<GalleryImage>>, faceDetector: FaceDetector) {
+fun MainView() {
+    val viewModel: ImageViewModel = viewModel()
+    // var viewState by remember { mutableStateOf<ImageState>(ImageState.Loading) }
+    var viewState = viewModel.imageStateData.asFlow().collectAsState(ImageState.Loading)
+
+    when (val state = viewState.value) {
+        ImageState.Loading -> {
+            ShowLoader()
+        }
+
+        is ImageState.Success -> {
+            ImageGridView(
+                state.pagedImages,
+                viewModel.faceDetector,
+                viewModel
+            )
+        }
+
+        is ImageState.Success2 -> {
+            ImageGridView(
+                Pager(
+                    config = PagingConfig(pageSize = 10),
+                    pagingSourceFactory = { GalleryImageListPagingSource(state.galleryImage) }
+                ).flow,
+                viewModel.faceDetector,
+                viewModel
+            )
+        }
+
+        else -> {
+
+        }
+    }
+
+    /*LaunchedEffect(Unit) {
+        viewModel._imageStateData.postValue(ImageState.Success(viewModel.fetchPagedImages().flow))
+    }*/
+
+}
+
+@Composable
+fun ImageGridView(
+    images: Flow<PagingData<GalleryImage>>,
+    faceDetector: FaceDetector,
+    viewModel: ImageViewModel
+) {
     val lazyPagingItems = images.collectAsLazyPagingItems()
-
-    var permissionGranted = remember { mutableStateOf(false) }
-
+    var permissionGranted = remember { mutableStateOf(true) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
+            Log.d("Akshay", "isGranted $isGranted")
             permissionGranted.value = isGranted
+            viewModel._imageStateData.value = ImageState.Success(images)
         }
     )
 
     LaunchedEffect(key1 = Unit) {
         launcher.launch(Manifest.permission.READ_MEDIA_IMAGES)
-
     }
 
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        if (permissionGranted.value) {
-            ImageGrid(lazyPagingItems, faceDetector)
-        } else if (lazyPagingItems.itemCount == 0) {
-            Text("No images found")
+
+    if (permissionGranted.value) {
+        if (lazyPagingItems.itemCount == 0) {
+            showNoImagesFoundView()
         } else {
-            showPermissionView()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                ImageGrid(lazyPagingItems, faceDetector)
+
+            }
+        }
+    } else {
+        if (permissionGranted.value.not()) {
+            ShowPermissionView()
         }
     }
 
 
+}
+
+@Composable
+fun showNoImagesFoundView() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("No images found")
+    }
 }
 
 @Composable
@@ -91,39 +158,14 @@ fun ImageGrid(lazyPagingItems: LazyPagingItems<GalleryImage>, faceDetector: Face
             if (image != null) {
                 ImageItem(image, faceDetector)
             } else {
-                // Display placeholder while loading
-                Box(modifier = Modifier.fillMaxSize()) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
+                ShowLoader()
             }
-        }
-
-        // Handle loading state for infinite scrolling
-        when (lazyPagingItems.loadState.append) {
-            is androidx.paging.LoadState.Loading -> {
-                item(span = { GridItemSpan(3) }) {
-                    // Display loading indicator at the bottom
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-                }
-            }
-
-            is androidx.paging.LoadState.Error -> {
-            }
-
-            else -> {} // Do nothing when loaded successfully
         }
     }
 }
 
 @Composable
 fun ImageItem(image: GalleryImage, faceDetector: FaceDetector) {
-    // Assuming 'image' is a data class or object containing image information
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -161,9 +203,19 @@ fun ImageItem(image: GalleryImage, faceDetector: FaceDetector) {
 }
 
 @Composable
-fun showPermissionView() {
+fun ShowLoader() {
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ShowPermissionView() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Text("Please provide permission to access photos and detect faces")
